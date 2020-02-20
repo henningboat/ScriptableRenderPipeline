@@ -485,8 +485,6 @@ namespace UnityEngine.Rendering.Universal
 
             lightData.mainLightIndex = mainLightIndex;
 
-            visibleLights = CullLightsOfOtherTimePeriod(visibleLights, timePeriod);
-
             if (settings.additionalLightsRenderingMode != LightRenderingMode.Disabled)
             {
                 lightData.additionalLightsCount =
