@@ -38,6 +38,7 @@ float3 EvalBurleyDiffusionProfile(float r, float3 S)
 #endif
 }
 
+// https://zero-radiance.github.io/post/sampling-diffusion/
 // Performs sampling of a Normalized Burley diffusion profile in polar coordinates.
 // 'u' is the random number: [0, 1).
 // rcp(S) = 1 / ShapeParam = ScatteringDistance.
