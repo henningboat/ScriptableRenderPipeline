@@ -25,6 +25,13 @@ namespace UnityEngine.Rendering.Universal
         public bool supportsDynamicBatching;
         public PerObjectData perObjectData;
         public bool killAlphaInFinalBlit;
+
+        public TimePeriod timePeriod;
+
+        public void Dispose()
+        {
+	        lightData.visibleLights.Dispose();
+        }
     }
 
     [MovedFrom("UnityEngine.Rendering.LWRP")] public struct LightData

@@ -226,6 +226,8 @@ namespace UnityEngine.Rendering.Universal
 
                 renderer.Setup(context, ref renderingData);
                 renderer.Execute(context, ref renderingData);
+
+                renderingData.Dispose();
             }
 
             context.ExecuteCommandBuffer(cmd);
@@ -348,7 +350,9 @@ namespace UnityEngine.Rendering.Universal
         static void InitializeRenderingData(UniversalRenderPipelineAsset settings, ref CameraData cameraData, ref CullingResults cullResults,
             out RenderingData renderingData)
         {
-            var visibleLights = cullResults.visibleLights;
+	        renderingData.timePeriod = TimePeriodUtility.GetTimePeriod(cameraData);
+
+            var visibleLights = CullLightsOfOtherTimePeriod(cullResults.visibleLights,renderingData.timePeriod);
 
             int mainLightIndex = GetMainLightIndex(settings, visibleLights);
             bool mainLightCastShadows = false;
@@ -381,7 +385,7 @@ namespace UnityEngine.Rendering.Universal
 
             renderingData.cullResults = cullResults;
             renderingData.cameraData = cameraData;
-            InitializeLightData(settings, visibleLights, mainLightIndex, out renderingData.lightData);
+            InitializeLightData(settings, visibleLights, mainLightIndex, renderingData.timePeriod, out renderingData.lightData);
             InitializeShadowData(settings, visibleLights, mainLightCastShadows, additionalLightsCastShadows && !renderingData.lightData.shadeAdditionalLightsPerVertex, out renderingData.shadowData);
             InitializePostProcessingData(settings, out renderingData.postProcessingData);
             renderingData.supportsDynamicBatching = settings.supportsDynamicBatching;
@@ -474,12 +478,14 @@ namespace UnityEngine.Rendering.Universal
             postProcessingData.lutSize = settings.colorGradingLutSize;
         }
 
-        static void InitializeLightData(UniversalRenderPipelineAsset settings, NativeArray<VisibleLight> visibleLights, int mainLightIndex, out LightData lightData)
+        static void InitializeLightData(UniversalRenderPipelineAsset settings, NativeArray<VisibleLight> visibleLights, int mainLightIndex, TimePeriod timePeriod, out LightData lightData)
         {
             int maxPerObjectAdditionalLights = UniversalRenderPipeline.maxPerObjectLights;
             int maxVisibleAdditionalLights = UniversalRenderPipeline.maxVisibleAdditionalLights;
 
             lightData.mainLightIndex = mainLightIndex;
+
+            visibleLights = CullLightsOfOtherTimePeriod(visibleLights, timePeriod);
 
             if (settings.additionalLightsRenderingMode != LightRenderingMode.Disabled)
             {
@@ -497,6 +503,31 @@ namespace UnityEngine.Rendering.Universal
             lightData.shadeAdditionalLightsPerVertex = settings.additionalLightsRenderingMode == LightRenderingMode.PerVertex;
             lightData.visibleLights = visibleLights;
             lightData.supportsMixedLighting = settings.supportsMixedLighting;
+        }
+
+        private static NativeArray<VisibleLight> CullLightsOfOtherTimePeriod(NativeArray<VisibleLight> allLights, TimePeriod timePeriod)
+        {
+	        VisibleLight[] relevantLights = new VisibleLight[allLights.Length];
+	        int relevantLightCount = 0;
+
+	        int timePeriodLayer = TimePeriodUtility.GetTimePeriodLayer(timePeriod);
+	        for (int i = 0; i < allLights.Length; i++)
+	        {
+		        VisibleLight visibleLight = allLights[i];
+		        if (visibleLight.light != null && (visibleLight.light.gameObject.layer==0 || visibleLight.light.gameObject.layer == timePeriodLayer))
+		        {
+			        relevantLights[relevantLightCount] = visibleLight;
+			        relevantLightCount++;
+		        }
+	        }
+
+	        NativeArray<VisibleLight> relevantLightsNativeArray = new NativeArray<VisibleLight>(relevantLightCount, Allocator.Temp);
+	        for (int i = 0; i < relevantLightCount; i++)
+	        {
+		        relevantLightsNativeArray[i] = relevantLights[i];
+	        }
+
+	        return relevantLightsNativeArray;
         }
 
         static PerObjectData GetPerObjectLightFlags(int additionalLightsCount)
