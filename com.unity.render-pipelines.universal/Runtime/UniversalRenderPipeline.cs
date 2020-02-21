@@ -1,5 +1,6 @@
 using System;
 using Unity.Collections;
+using UnityEngine.Rendering.LWRP;
 #if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.Rendering.Universal;
@@ -22,7 +23,7 @@ namespace UnityEngine.Rendering.Universal
 {
     public sealed partial class UniversalRenderPipeline : RenderPipeline
     {
-        internal static class PerFrameBuffer
+	    internal static class PerFrameBuffer
         {
             public static int _GlossyEnvironmentColor;
             public static int _SubtractiveShadowColor;
@@ -211,8 +212,6 @@ namespace UnityEngine.Rendering.Universal
                 renderer.Clear();
                 renderer.SetupCullingParameters(ref cullingParameters, ref cameraData);
 
-                ApplyTimePeriodKeyword(cmd,TimePeriodUtility.GetTimePeriod(cameraData));
-
                 context.ExecuteCommandBuffer(cmd);
                 cmd.Clear();
 
@@ -235,35 +234,6 @@ namespace UnityEngine.Rendering.Universal
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);
             context.Submit();
-        }
-
-        private static void ApplyTimePeriodKeyword(CommandBuffer cmd, TimePeriod getTimePeriod)
-        {
-	        switch (getTimePeriod)
-	        {
-		        case TimePeriod.T1:
-			        cmd.EnableShaderKeyword("TimePeriodT1");
-			        cmd.DisableShaderKeyword("TimePeriodT2");
-			        cmd.DisableShaderKeyword("TimePeriodT3");
-			        break;
-		        case TimePeriod.T2:
-			        cmd.DisableShaderKeyword("TimePeriodT1");
-			        cmd.EnableShaderKeyword("TimePeriodT2");
-			        cmd.DisableShaderKeyword("TimePeriodT3");
-			        break;
-		        case TimePeriod.T3:
-			        cmd.DisableShaderKeyword("TimePeriodT1");
-			        cmd.DisableShaderKeyword("TimePeriodT2");
-			        cmd.EnableShaderKeyword("TimePeriodT3");
-			        break;
-		        case TimePeriod.TAll:
-			        cmd.DisableShaderKeyword("TimePeriodT1");
-			        cmd.DisableShaderKeyword("TimePeriodT2");
-			        cmd.DisableShaderKeyword("TimePeriodT3");
-                    break;
-		        default:
-			        throw new ArgumentOutOfRangeException(nameof(getTimePeriod), getTimePeriod, null);
-	        }
         }
 
         static void SetSupportedRenderingFeatures()
@@ -662,10 +632,39 @@ namespace UnityEngine.Rendering.Universal
             Matrix4x4 viewProjMatrix = projMatrix * viewMatrix;
             Matrix4x4 invViewProjMatrix = Matrix4x4.Inverse(viewProjMatrix);
             Shader.SetGlobalMatrix(PerCameraBuffer._InvCameraViewProj, invViewProjMatrix);
+
+            TimePeriod timePeriod = TimePeriodUtility.GetTimePeriod(cameraData);
+            ApplyTimePeriodKeyword(timePeriod);
+            AmbientLightUtility.ApplyAmbientColor(timePeriod);
         }
 
-
-
-
+        private static void ApplyTimePeriodKeyword(TimePeriod getTimePeriod)
+        {
+	        switch (getTimePeriod)
+	        {
+		        case TimePeriod.T1:
+			        Shader.EnableKeyword("TimePeriodT1");
+			        Shader.DisableKeyword("TimePeriodT2");
+			        Shader.DisableKeyword("TimePeriodT3");
+			        break;
+		        case TimePeriod.T2:
+			        Shader.DisableKeyword("TimePeriodT1");
+			        Shader.EnableKeyword("TimePeriodT2");
+			        Shader.DisableKeyword("TimePeriodT3");
+			        break;
+		        case TimePeriod.T3:
+			        Shader.DisableKeyword("TimePeriodT1");
+			        Shader.DisableKeyword("TimePeriodT2");
+			        Shader.EnableKeyword("TimePeriodT3");
+			        break;
+		        case TimePeriod.TAll:
+			        Shader.DisableKeyword("TimePeriodT1");
+			        Shader.DisableKeyword("TimePeriodT2");
+			        Shader.DisableKeyword("TimePeriodT3");
+			        break;
+		        default:
+			        throw new ArgumentOutOfRangeException(nameof(getTimePeriod), getTimePeriod, null);
+	        }
+        }
     }
 }
