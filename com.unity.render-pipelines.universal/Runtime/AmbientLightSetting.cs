@@ -7,7 +7,7 @@ namespace UnityEngine.Rendering.Universal
 	{
 		#region Static Stuff
 
-		private static PerTimePeriodSetting _default = default;
+		private static PerTimePeriodSetting _default = new PerTimePeriodSetting();
 
 		#endregion
 
