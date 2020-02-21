@@ -211,6 +211,8 @@ namespace UnityEngine.Rendering.Universal
                 renderer.Clear();
                 renderer.SetupCullingParameters(ref cullingParameters, ref cameraData);
 
+                ApplyTimePeriodKeyword(cmd,TimePeriodUtility.GetTimePeriod(cameraData));
+
                 context.ExecuteCommandBuffer(cmd);
                 cmd.Clear();
 
@@ -235,16 +237,45 @@ namespace UnityEngine.Rendering.Universal
             context.Submit();
         }
 
+        private static void ApplyTimePeriodKeyword(CommandBuffer cmd, TimePeriod getTimePeriod)
+        {
+	        switch (getTimePeriod)
+	        {
+		        case TimePeriod.T1:
+			        cmd.EnableShaderKeyword("TimePeriodT1");
+			        cmd.DisableShaderKeyword("TimePeriodT2");
+			        cmd.DisableShaderKeyword("TimePeriodT3");
+			        break;
+		        case TimePeriod.T2:
+			        cmd.DisableShaderKeyword("TimePeriodT1");
+			        cmd.EnableShaderKeyword("TimePeriodT2");
+			        cmd.DisableShaderKeyword("TimePeriodT3");
+			        break;
+		        case TimePeriod.T3:
+			        cmd.DisableShaderKeyword("TimePeriodT1");
+			        cmd.DisableShaderKeyword("TimePeriodT2");
+			        cmd.EnableShaderKeyword("TimePeriodT3");
+			        break;
+		        case TimePeriod.TAll:
+			        cmd.DisableShaderKeyword("TimePeriodT1");
+			        cmd.DisableShaderKeyword("TimePeriodT2");
+			        cmd.DisableShaderKeyword("TimePeriodT3");
+                    break;
+		        default:
+			        throw new ArgumentOutOfRangeException(nameof(getTimePeriod), getTimePeriod, null);
+	        }
+        }
+
         static void SetSupportedRenderingFeatures()
         {
 #if UNITY_EDITOR
             SupportedRenderingFeatures.active = new SupportedRenderingFeatures()
             {
                 reflectionProbeModes = SupportedRenderingFeatures.ReflectionProbeModes.None,
-                defaultMixedLightingModes = SupportedRenderingFeatures.LightmapMixedBakeModes.Subtractive,
-                mixedLightingModes = SupportedRenderingFeatures.LightmapMixedBakeModes.Subtractive | SupportedRenderingFeatures.LightmapMixedBakeModes.IndirectOnly,
-                lightmapBakeTypes = LightmapBakeType.Baked | LightmapBakeType.Mixed,
-                lightmapsModes = LightmapsMode.CombinedDirectional | LightmapsMode.NonDirectional,
+                defaultMixedLightingModes = SupportedRenderingFeatures.LightmapMixedBakeModes.None,
+                mixedLightingModes = SupportedRenderingFeatures.LightmapMixedBakeModes.None,
+                lightmapBakeTypes = LightmapBakeType.Realtime,
+                lightmapsModes = LightmapsMode.NonDirectional,
                 lightProbeProxyVolumes = false,
                 motionVectors = false,
                 receiveShadows = false,
@@ -352,7 +383,8 @@ namespace UnityEngine.Rendering.Universal
         {
 	        renderingData.timePeriod = TimePeriodUtility.GetTimePeriod(cameraData);
 
-            var visibleLights = CullLightsOfOtherTimePeriod(cullResults.visibleLights,renderingData.timePeriod);
+            var visibleLights = CullLightsOfOtherTimePeriod(cullResults.visibleLights, renderingData.timePeriod);
+            CullReflectionProbesOfOtherTimePeriods(ref cullResults, renderingData.timePeriod);
 
             int mainLightIndex = GetMainLightIndex(settings, visibleLights);
             bool mainLightCastShadows = false;
@@ -393,6 +425,27 @@ namespace UnityEngine.Rendering.Universal
 
 			bool isOffscreenCamera = cameraData.camera.targetTexture != null && !cameraData.isSceneViewCamera;
             renderingData.killAlphaInFinalBlit = !Graphics.preserveFramebufferAlpha && PlatformNeedsToKillAlpha() && !isOffscreenCamera;
+        }
+
+        private static void CullReflectionProbesOfOtherTimePeriods(ref CullingResults cullResults, TimePeriod renderingDataTimePeriod)
+        {
+	        NativeArray<VisibleReflectionProbe> reflectionProbes = cullResults.visibleReflectionProbes;
+
+	        var remapData = cullResults.GetReflectionProbeIndexMap(Allocator.Temp);
+			
+            for (int i = 0; i < remapData.Length; i++)
+	        {
+		        if (reflectionProbes.Length>i&&reflectionProbes[i].reflectionProbe.gameObject.layer == TimePeriodUtility.GetTimePeriodLayer(renderingDataTimePeriod))
+		        {
+			        remapData[i] = i;
+		        }
+		        else
+		        {
+			        remapData[i] = -1;
+		        }
+	        }
+
+	        cullResults.SetReflectionProbeIndexMap(remapData);
         }
 
         static void InitializeShadowData(UniversalRenderPipelineAsset settings, NativeArray<VisibleLight> visibleLights, bool mainLightCastShadows, bool additionalLightsCastShadows, out ShadowData shadowData)
@@ -530,7 +583,7 @@ namespace UnityEngine.Rendering.Universal
 
         static PerObjectData GetPerObjectLightFlags(int additionalLightsCount)
         {
-            var configuration = PerObjectData.ReflectionProbes | PerObjectData.Lightmaps | PerObjectData.LightProbe | PerObjectData.LightData | PerObjectData.OcclusionProbe;
+            var configuration = PerObjectData.ReflectionProbes | PerObjectData.LightData | PerObjectData.OcclusionProbe;
 
             if (additionalLightsCount > 0)
             {
