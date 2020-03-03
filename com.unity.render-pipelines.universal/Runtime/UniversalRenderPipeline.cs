@@ -553,7 +553,8 @@ namespace UnityEngine.Rendering.Universal
 
         static PerObjectData GetPerObjectLightFlags(int additionalLightsCount)
         {
-            var configuration = PerObjectData.ReflectionProbes | PerObjectData.LightData | PerObjectData.OcclusionProbe;
+			//todo we don't actually need light and occulsion probes, evaluate if this is still neccacary 
+            var configuration = PerObjectData.ReflectionProbes | PerObjectData.LightData | PerObjectData.OcclusionProbe | PerObjectData.LightProbe;
 
             if (additionalLightsCount > 0)
             {
