@@ -15,13 +15,24 @@ namespace UnityEngine.Rendering.Universal
 
 		[SerializeField] private PerTimePeriodSetting _t1 = new PerTimePeriodSetting();
 		[SerializeField] private PerTimePeriodSetting _t2 = new PerTimePeriodSetting();
-        [SerializeField] private PerTimePeriodSetting _t3 = new PerTimePeriodSetting();
+		[SerializeField] private PerTimePeriodSetting _t3 = new PerTimePeriodSetting();
 
         #endregion
 
-        #region Public methods
+        #region Constructors
 
-        public PerTimePeriodSetting GetForTimePeriod(TimePeriod timePeriod)
+        public AmbientLightSetting(PerTimePeriodSetting t1, PerTimePeriodSetting t2, PerTimePeriodSetting t3)
+		{
+			_t1 = t1;
+			_t2 = t2;
+			_t3 = t3;
+		}
+
+		#endregion
+
+		#region Public methods
+
+		public PerTimePeriodSetting GetForTimePeriod(TimePeriod timePeriod)
 		{
 			switch (timePeriod)
 			{
@@ -56,6 +67,21 @@ namespace UnityEngine.Rendering.Universal
 			public Color EquatorAmbientColor => _equatorAmbientColor;
 			public Color GroundAmbientColor => _groundAmbientColor;
 			public Color SkyAmbientColor => _skyAmbientColor;
+
+			#endregion
+
+			#region Constructors
+
+			public PerTimePeriodSetting()
+			{
+			}
+
+			public PerTimePeriodSetting(Color skyAmbientColor, Color equatorAmbientColor, Color groundAmbientColor)
+			{
+				_skyAmbientColor = skyAmbientColor;
+				_equatorAmbientColor = equatorAmbientColor;
+				_groundAmbientColor = groundAmbientColor;
+			}
 
 			#endregion
 		}
