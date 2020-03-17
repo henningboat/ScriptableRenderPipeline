@@ -70,11 +70,11 @@ namespace UnityEngine.Rendering.Universal.Internal
                 return false;
 
             Clear();
-            int shadowLightIndex = renderingData.lightData.mainLightIndex;
+            int shadowLightIndex = renderingData.lightData.mainLightShadowIndex;
             if (shadowLightIndex == -1)
                 return false;
 
-            VisibleLight shadowLight = renderingData.lightData.visibleLights[shadowLightIndex];
+            VisibleLight shadowLight = renderingData.lightData.visibleLights[ renderingData.lightData.mainLightIndex];
             Light light = shadowLight.light;
             if (light.shadows == LightShadows.None)
                 return false;
@@ -153,11 +153,11 @@ namespace UnityEngine.Rendering.Universal.Internal
 
         void RenderMainLightCascadeShadowmap(ref ScriptableRenderContext context, ref CullingResults cullResults, ref LightData lightData, ref ShadowData shadowData)
         {
-            int shadowLightIndex = lightData.mainLightIndex;
-            if (shadowLightIndex == -1)
+            int shadowLightIndex = lightData.mainLightShadowIndex;
+            if (lightData.mainLightIndex == -1)
                 return;
 
-            VisibleLight shadowLight = lightData.visibleLights[shadowLightIndex];
+            VisibleLight shadowLight = lightData.visibleLights[lightData.mainLightIndex];
 
             CommandBuffer cmd = CommandBufferPool.Get(m_ProfilerTag);
             using (new ProfilingSample(cmd, m_ProfilerTag))
@@ -169,7 +169,7 @@ namespace UnityEngine.Rendering.Universal.Internal
                     var splitData = settings.splitData;
                     splitData.cullingSphere = m_CascadeSplitDistances[cascadeIndex];
                     settings.splitData = splitData;
-                    Vector4 shadowBias = ShadowUtils.GetShadowBias(ref shadowLight, shadowLightIndex, ref shadowData, m_CascadeSlices[cascadeIndex].projectionMatrix, m_CascadeSlices[cascadeIndex].resolution);
+                    Vector4 shadowBias = ShadowUtils.GetShadowBias(ref shadowLight, lightData.mainLightIndex, ref shadowData, m_CascadeSlices[cascadeIndex].projectionMatrix, m_CascadeSlices[cascadeIndex].resolution);
                     ShadowUtils.SetupShadowCasterConstantBuffer(cmd, ref shadowLight, shadowBias);
                     ShadowUtils.RenderShadowSlice(cmd, ref context, ref m_CascadeSlices[cascadeIndex],
                         ref settings, m_CascadeSlices[cascadeIndex].projectionMatrix, m_CascadeSlices[cascadeIndex].viewMatrix);

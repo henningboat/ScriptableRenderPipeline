@@ -356,7 +356,7 @@ namespace UnityEngine.Rendering.Universal
             var visibleLights = CullLightsOfOtherTimePeriod(cullResults.visibleLights, renderingData.timePeriod);
             CullReflectionProbesOfOtherTimePeriods(ref cullResults, renderingData.timePeriod);
 
-            int mainLightIndex = GetMainLightIndex(settings, visibleLights);
+            int mainLightIndex = GetMainLightIndex(settings, cullResults, visibleLights, out int mainLightShadowIndex);
             bool mainLightCastShadows = false;
             bool additionalLightsCastShadows = false;
 
@@ -387,7 +387,7 @@ namespace UnityEngine.Rendering.Universal
 
             renderingData.cullResults = cullResults;
             renderingData.cameraData = cameraData;
-            InitializeLightData(settings, visibleLights, mainLightIndex, renderingData.timePeriod, out renderingData.lightData);
+            InitializeLightData(settings, visibleLights, mainLightIndex, mainLightShadowIndex, renderingData.timePeriod, out renderingData.lightData);
             InitializeShadowData(settings, visibleLights, mainLightCastShadows, additionalLightsCastShadows && !renderingData.lightData.shadeAdditionalLightsPerVertex, out renderingData.shadowData);
             InitializePostProcessingData(settings, out renderingData.postProcessingData);
             renderingData.supportsDynamicBatching = settings.supportsDynamicBatching;
@@ -501,7 +501,7 @@ namespace UnityEngine.Rendering.Universal
             postProcessingData.lutSize = settings.colorGradingLutSize;
         }
 
-        static void InitializeLightData(UniversalRenderPipelineAsset settings, NativeArray<VisibleLight> visibleLights, int mainLightIndex, TimePeriod timePeriod, out LightData lightData)
+        static void InitializeLightData(UniversalRenderPipelineAsset settings, NativeArray<VisibleLight> visibleLights, int mainLightIndex, int mainLightShadowIndex, TimePeriod timePeriod, out LightData lightData)
         {
             int maxPerObjectAdditionalLights = UniversalRenderPipeline.maxPerObjectLights;
             int maxVisibleAdditionalLights = UniversalRenderPipeline.maxVisibleAdditionalLights;
@@ -524,6 +524,7 @@ namespace UnityEngine.Rendering.Universal
             lightData.shadeAdditionalLightsPerVertex = settings.additionalLightsRenderingMode == LightRenderingMode.PerVertex;
             lightData.visibleLights = visibleLights;
             lightData.supportsMixedLighting = settings.supportsMixedLighting;
+            lightData.mainLightShadowIndex = mainLightShadowIndex;
         }
 
         private static NativeArray<VisibleLight> CullLightsOfOtherTimePeriod(NativeArray<VisibleLight> allLights, TimePeriod timePeriod)
@@ -569,14 +570,13 @@ namespace UnityEngine.Rendering.Universal
         }
 
         // Main Light is always a directional light
-        static int GetMainLightIndex(UniversalRenderPipelineAsset settings, NativeArray<VisibleLight> visibleLights)
+        static int GetMainLightIndex(UniversalRenderPipelineAsset settings, CullingResults cullResults, NativeArray<VisibleLight> visibleLights, out int mainLightShadowIndex)
         {
             int totalVisibleLights = visibleLights.Length;
-
+            mainLightShadowIndex = -1;
             if (totalVisibleLights == 0 || settings.mainLightRenderingMode != LightRenderingMode.PerPixel)
                 return -1;
 
-            Light sunLight = RenderSettings.sun;
             int brightestDirectionalLightIndex = -1;
             float brightestLightIntensity = 0.0f;
             for (int i = 0; i < totalVisibleLights; ++i)
@@ -590,14 +590,20 @@ namespace UnityEngine.Rendering.Universal
                 if (currLight == null)
                     break;
 
-                if (currLight == sunLight)
-                    return i;
-
                 // In case no shadow light is present we will return the brightest directional light
                 if (currVisibleLight.lightType == LightType.Directional && currLight.intensity > brightestLightIntensity)
                 {
                     brightestLightIntensity = currLight.intensity;
                     brightestDirectionalLightIndex = i;
+                }
+            }
+
+            for (int i = 0; i < cullResults.visibleLights.Length; i++)
+            {
+                VisibleLight cullResultsLight = cullResults.visibleLights[i];
+                if (cullResultsLight.light == visibleLights[brightestDirectionalLightIndex].light)
+                {
+                    mainLightShadowIndex = i;
                 }
             }
 

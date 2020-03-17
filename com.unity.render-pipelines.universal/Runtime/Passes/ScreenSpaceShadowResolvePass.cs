@@ -47,7 +47,7 @@ namespace UnityEngine.Rendering.Universal.Internal
                 return;
             }
 
-            if (renderingData.lightData.mainLightIndex == -1)
+            if (renderingData.lightData.mainLightShadowIndex == -1)
                 return;
 
             Camera camera = renderingData.cameraData.camera;
