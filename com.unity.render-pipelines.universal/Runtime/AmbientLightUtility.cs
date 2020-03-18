@@ -26,7 +26,11 @@ namespace UnityEngine.Rendering.LWRP
 				new AmbientLightSetting.PerTimePeriodSetting(
 					new Color(0.038f, 0.024f, 0.01f, 0f),
 					new Color(0.038f, 0.015f, 0.003f, 0f),
-					new Color(0f, 0f, 0f, 0f)));
+					new Color(0f, 0f, 0f, 0f)),
+				new AmbientLightSetting.PerTimePeriodSetting(
+					new Color(0.004f, 0.008f, 0.012f),
+					new Color(0.004f, 0.008f, 0.01f),
+					new Color(0f, 0f, 0f)));
 		}
 
 		public static void SetAmbientLightSetting(AmbientLightSetting ambientLightSetting)

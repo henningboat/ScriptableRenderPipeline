@@ -653,8 +653,11 @@ namespace UnityEngine.Rendering.Universal
 			        Shader.EnableKeyword("TimePeriodT1");
 			        Shader.DisableKeyword("TimePeriodT2");
 			        Shader.DisableKeyword("TimePeriodT3");
+			        Shader.DisableKeyword("TimePeriodT3");
 			        break;
+                //for now, shaders treat T4 like T3, let's hope I wont regret this
 		        case TimePeriod.T2:
+		        case TimePeriod.T4:
 			        Shader.DisableKeyword("TimePeriodT1");
 			        Shader.EnableKeyword("TimePeriodT2");
 			        Shader.DisableKeyword("TimePeriodT3");
