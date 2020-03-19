@@ -6,9 +6,6 @@ namespace UnityEngine.Rendering.LWRP
 	{
 		#region Static Stuff
 
-		private static readonly int SkyAmbientColorID = Shader.PropertyToID("__SkyAmbientColor");
-		private static readonly int EquatorAmbientColorID = Shader.PropertyToID("__EquatorAmbientColor");
-		private static readonly int GroundAmbientColorID = Shader.PropertyToID("__GroundAmbientColor");
 		private static AmbientLightSetting _currentAmbientColor = GetDefault();
 		private static AmbientLightSetting _default = GetDefault();
 
@@ -46,12 +43,10 @@ namespace UnityEngine.Rendering.LWRP
 			}
 		}
 
-		public static void ApplyAmbientColor(TimePeriod timePeriod)
+		public static void ApplyAmbientColor(TimePeriod timePeriod, Camera camera)
 		{
 			var data = _currentAmbientColor.GetForTimePeriod(timePeriod);
-			Shader.SetGlobalColor(SkyAmbientColorID, data.SkyAmbientColor);
-			Shader.SetGlobalColor(EquatorAmbientColorID, data.EquatorAmbientColor);
-			Shader.SetGlobalColor(GroundAmbientColorID, data.GroundAmbientColor);
+			data.Apply(camera);
 		}
 
 		#endregion

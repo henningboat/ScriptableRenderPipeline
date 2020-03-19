@@ -642,7 +642,7 @@ namespace UnityEngine.Rendering.Universal
 
             TimePeriod timePeriod = TimePeriodUtility.GetTimePeriod(cameraData);
             ApplyTimePeriodKeyword(timePeriod);
-            AmbientLightUtility.ApplyAmbientColor(timePeriod);
+            AmbientLightUtility.ApplyAmbientColor(timePeriod, camera);
         }
 
         private static void ApplyTimePeriodKeyword(TimePeriod getTimePeriod)
