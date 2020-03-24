@@ -598,13 +598,20 @@ namespace UnityEngine.Rendering.Universal
                 }
             }
 
-            for (int i = 0; i < cullResults.visibleLights.Length; i++)
+            if (brightestDirectionalLightIndex >= 0)
             {
-                VisibleLight cullResultsLight = cullResults.visibleLights[i];
-                if (cullResultsLight.light == visibleLights[brightestDirectionalLightIndex].light)
+                for (int i = 0; i < cullResults.visibleLights.Length; i++)
                 {
-                    mainLightShadowIndex = i;
+                    VisibleLight cullResultsLight = cullResults.visibleLights[i];
+                    if (cullResultsLight.light == visibleLights[brightestDirectionalLightIndex].light)
+                    {
+                        mainLightShadowIndex = i;
+                    }
                 }
+            }
+            else
+            {
+                mainLightShadowIndex =- 1;
             }
 
             return brightestDirectionalLightIndex;
