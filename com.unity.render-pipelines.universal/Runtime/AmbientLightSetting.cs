@@ -88,6 +88,8 @@ namespace UnityEngine.Rendering.Universal
 			[BoxGroup("Fog")] [SerializeField] [ShowIf("_heightFog")]
 			private float _heightFogStartHeight = 0;
 			[BoxGroup("Fog")] [SerializeField] [ShowIf("_heightFog")]
+			private bool _invertHeightFog = false;
+			[BoxGroup("Fog")] [SerializeField] [ShowIf("_heightFog")]
 			private float _heightFogDistance = 10;
 
 			#endregion
@@ -153,7 +155,13 @@ namespace UnityEngine.Rendering.Universal
 					fogPosition.y = 1000000;
 				}
 
-				Vector3 fogScale = new Vector3(1, _heightFogDistance, _forwardFogDistance);
+				float heightFogDistance = _heightFogDistance;
+				if (_invertHeightFog)
+				{
+					heightFogDistance *= -1;
+				}
+				
+				Vector3 fogScale = new Vector3(1, heightFogDistance, _forwardFogDistance);
 
 				Shader.SetGlobalMatrix(WorldToFogMatrixID, Matrix4x4.TRS(fogPosition, heightFogRotation, fogScale).inverse);
 			}
