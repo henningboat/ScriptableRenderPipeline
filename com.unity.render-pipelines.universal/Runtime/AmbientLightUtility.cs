@@ -1,4 +1,8 @@
 using UnityEngine.Rendering.Universal;
+#if UNITY_EDITOR
+using UnityEditor;
+
+#endif
 
 namespace UnityEngine.Rendering.LWRP
 {
@@ -8,7 +12,9 @@ namespace UnityEngine.Rendering.LWRP
 
 		private static AmbientLightSetting _currentAmbientColor = GetDefault();
 		private static AmbientLightSetting _default = GetDefault();
-
+#if UNITY_EDITOR
+		private static AmbientLightSetting.PerTimePeriodSetting _editorNoLightingSetting = new AmbientLightSetting.PerTimePeriodSetting(Color.black, Color.black, Color.black);
+#endif
 		private static AmbientLightSetting GetDefault()
 		{
 			return new AmbientLightSetting(
@@ -46,7 +52,17 @@ namespace UnityEngine.Rendering.LWRP
 		public static void ApplyAmbientColor(TimePeriod timePeriod, Camera camera)
 		{
 			var data = _currentAmbientColor.GetForTimePeriod(timePeriod);
-			data.Apply(camera);
+
+#if UNITY_EDITOR
+			if (SceneView.lastActiveSceneView.sceneLighting == false)
+			{
+				_editorNoLightingSetting.Apply(camera);
+			}
+			else
+#endif
+			{
+				data.Apply(camera);
+			}
 		}
 
 		#endregion
