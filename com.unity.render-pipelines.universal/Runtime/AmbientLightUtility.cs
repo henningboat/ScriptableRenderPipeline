@@ -54,7 +54,8 @@ namespace UnityEngine.Rendering.LWRP
 			var data = _currentAmbientColor.GetForTimePeriod(timePeriod);
 
 #if UNITY_EDITOR
-			if (SceneView.lastActiveSceneView.sceneLighting == false)
+			SceneView lastActiveSceneView = SceneView.lastActiveSceneView;
+			if (lastActiveSceneView != null && lastActiveSceneView.sceneLighting == false)
 			{
 				_editorNoLightingSetting.Apply(camera);
 			}
