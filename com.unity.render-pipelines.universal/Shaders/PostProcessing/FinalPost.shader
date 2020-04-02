@@ -59,7 +59,8 @@ Shader "Hidden/Universal Render Pipeline/FinalPost"
 
             half3 color = Load(positionSS, 0, 0).xyz;
 
-            #if _FXAA
+            //I moved FXAA to Uber shader to prevent artifacts
+            #if _FXAA && false
             {
                 // Edge detection
                 half3 rgbNW = Load(positionSS, -1, -1);

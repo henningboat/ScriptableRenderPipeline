@@ -331,6 +331,11 @@ namespace UnityEngine.Rendering.Universal.Internal
                 SetupGrain(cameraData.camera, m_Materials.uber);
                 SetupDithering(ref cameraData, m_Materials.uber);
 				
+                //Setup FXAA
+                // FXAA setup
+                if (cameraData.antialiasing == AntialiasingMode.FastApproximateAntialiasing)
+                    m_Materials.uber.EnableKeyword(ShaderKeywordStrings.Fxaa);
+                
                 if (Display.main.requiresSrgbBlitToBackbuffer && m_EnableSRGBConversionIfNeeded)
                     m_Materials.uber.EnableKeyword(ShaderKeywordStrings.LinearToSRGBConversion);
 
