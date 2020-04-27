@@ -1,5 +1,6 @@
 using System;
 using Unity.Collections;
+using UnityEditor.Graphs;
 using UnityEngine.Rendering.LWRP;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -177,7 +178,22 @@ namespace UnityEngine.Rendering.Universal
                 //It should be called before culling to prepare material. When there isn't any VisualEffect component, this method has no effect.
                 VFX.VFXManager.PrepareCamera(camera);
 #endif
-                RenderSingleCamera(renderContext, camera);
+                
+                RiftPerspectiveManager.GetPerspectives(camera, out CameraPerspective mainCameraPerspective, out CameraPerspective additionalCameraPerspective);
+
+                CameraData cameraData;
+                if (additionalCameraPerspective != null)
+                {
+                    RenderSingleCamera(renderContext, camera, additionalCameraPerspective, out cameraData);
+
+                    //todo clean up garbage allocation
+                    CommandBuffer cmd = new CommandBuffer();
+                    cmd.GetTemporaryRT(Shader.PropertyToID("_RiftShapeBuffer"), camera.pixelWidth, camera.pixelHeight, 0);
+                    cmd.Blit("_CameraColorTexture", "_RiftShapeBuffer");
+                    renderContext.ExecuteCommandBuffer(cmd);
+                }
+
+                RenderSingleCamera(renderContext, camera, mainCameraPerspective, out cameraData);
 
                 EndCameraRendering(renderContext, camera);
             }
@@ -185,17 +201,25 @@ namespace UnityEngine.Rendering.Universal
             EndFrameRendering(renderContext, cameras);
         }
 
-        public static void RenderSingleCamera(ScriptableRenderContext context, Camera camera)
+        public static void RenderSingleCamera(ScriptableRenderContext context, Camera camera, CameraPerspective cameraPerspective, out CameraData cameraData)
         {
+            var cameraTransform = camera.transform;
+            cameraTransform.position = cameraPerspective.CameraPosition;
+            cameraTransform.rotation = cameraPerspective.CameraRotation;
+            camera.cullingMask = cameraPerspective.CullingMask;
+
             if (!camera.TryGetCullingParameters(IsStereoEnabled(camera), out var cullingParameters))
+            {
+                cameraData = default;
                 return;
+            }
 
             var settings = asset;
             UniversalAdditionalCameraData additionalCameraData = null;
             if (camera.cameraType == CameraType.Game || camera.cameraType == CameraType.VR)
                 camera.gameObject.TryGetComponent(out additionalCameraData);
 
-            InitializeCameraData(settings, camera, additionalCameraData, out var cameraData);
+            InitializeCameraData(settings, camera, additionalCameraData, out cameraData);
             SetupPerCameraShaderConstants(cameraData);
 
             ScriptableRenderer renderer = (additionalCameraData != null) ? additionalCameraData.scriptableRenderer : settings.scriptableRenderer;
@@ -209,6 +233,7 @@ namespace UnityEngine.Rendering.Universal
             CommandBuffer cmd = CommandBufferPool.Get(tag);
             using (new ProfilingSample(cmd, tag))
             {
+                
                 renderer.Clear();
                 renderer.SetupCullingParameters(ref cullingParameters, ref cameraData);
 
@@ -227,6 +252,7 @@ namespace UnityEngine.Rendering.Universal
 
                 renderer.Setup(context, ref renderingData);
                 renderer.Execute(context, ref renderingData);
+
 
                 renderingData.Dispose();
             }
