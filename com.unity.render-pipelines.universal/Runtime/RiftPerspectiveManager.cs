@@ -31,13 +31,12 @@
 			{
 				if (_currentRiftController.OverwriteCameraTransformation)
 				{
-					cameraTransformPosition = _currentRiftController.CameraPosition;
-					cameraTransformRotation = _currentRiftController.CameraRotation;
+					_currentRiftController.GetTransformation(camera,out cameraTransformPosition, out cameraTransformRotation);
 				}
 
 				if (_currentRiftController.OverwriteCullingMask)
 				{
-					cameraCullingMask = _currentRiftController.CameraCullingMask;
+					cameraCullingMask = _currentRiftController.GetCullingMask(camera);
 				}
 				
 				

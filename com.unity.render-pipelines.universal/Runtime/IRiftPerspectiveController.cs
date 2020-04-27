@@ -4,8 +4,7 @@
 	{
 		bool OverwriteCameraTransformation { get; }
 		bool OverwriteCullingMask { get; }
-		Vector3 CameraPosition { get; }
-		Quaternion CameraRotation { get; }
-		int CameraCullingMask { get; }
+		void GetTransformation(Camera camera, out Vector3 position, out Quaternion rotation);
+		int GetCullingMask(Camera camera);
 	}
 }
