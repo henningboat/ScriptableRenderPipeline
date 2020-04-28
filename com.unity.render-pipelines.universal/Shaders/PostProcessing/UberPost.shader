@@ -143,6 +143,66 @@ Shader "Hidden/Universal Render Pipeline/UberPost"
 
             half3 color = (0.0).xxx;
 
+
+  #if _FXAA
+              {
+                
+                float2 positionNDC = uvDistorted;
+                int2   positionSS  = uvDistorted * _BlitTex_TexelSize.zw;
+                
+                // Edge detection
+                half3 rgbNW = Load(positionSS, -1, -1);
+                half3 rgbNE = Load(positionSS,  1, -1);
+                half3 rgbSW = Load(positionSS, -1,  1);
+                half3 rgbSE = Load(positionSS,  1,  1);
+
+                rgbNW = saturate(rgbNW);
+                rgbNE = saturate(rgbNE);
+                rgbSW = saturate(rgbSW);
+                rgbSE = saturate(rgbSE);
+                color = saturate(color);
+
+                half lumaNW = Luminance(rgbNW);
+                half lumaNE = Luminance(rgbNE);
+                half lumaSW = Luminance(rgbSW);
+                half lumaSE = Luminance(rgbSE);
+                half lumaM = Luminance(color);
+
+                float2 dir;
+                dir.x = -((lumaNW + lumaNE) - (lumaSW + lumaSE));
+                dir.y = ((lumaNW + lumaSW) - (lumaNE + lumaSE));
+
+                half lumaSum = lumaNW + lumaNE + lumaSW + lumaSE;
+                float dirReduce = max(lumaSum * (0.25 * FXAA_REDUCE_MUL), FXAA_REDUCE_MIN);
+                float rcpDirMin = rcp(min(abs(dir.x), abs(dir.y)) + dirReduce);
+
+                dir = min((FXAA_SPAN_MAX).xx, max((-FXAA_SPAN_MAX).xx, dir * rcpDirMin)) * _BlitTex_TexelSize.xy;
+
+                // Blur
+                half3 rgb03 = Fetch(positionNDC, dir * (0.0 / 3.0 - 0.5));
+                half3 rgb13 = Fetch(positionNDC, dir * (1.0 / 3.0 - 0.5));
+                half3 rgb23 = Fetch(positionNDC, dir * (2.0 / 3.0 - 0.5));
+                half3 rgb33 = Fetch(positionNDC, dir * (3.0 / 3.0 - 0.5));
+
+                rgb03 = saturate(rgb03);
+                rgb13 = saturate(rgb13);
+                rgb23 = saturate(rgb23);
+                rgb33 = saturate(rgb33);
+
+                half3 rgbA = 0.5 * (rgb13 + rgb23);
+                half3 rgbB = rgbA * 0.5 + 0.25 * (rgb03 + rgb33);
+
+                half lumaB = Luminance(rgbB);
+
+                half lumaMin = Min3(lumaM, lumaNW, Min3(lumaNE, lumaSW, lumaSE));
+                half lumaMax = Max3(lumaM, lumaNW, Max3(lumaNE, lumaSW, lumaSE));
+
+                color = ((lumaB < lumaMin) || (lumaB > lumaMax)) ? rgbA : rgbB;
+            }
+ #endif
+
+
+
             #if _CHROMATIC_ABERRATION
             {
                 // Very fast version of chromatic aberration from HDRP using 3 samples and hardcoded
@@ -236,65 +296,6 @@ Shader "Hidden/Universal Render Pipeline/UberPost"
             #if _DITHERING
             {
                 color = ApplyDithering(color, uv, TEXTURE2D_ARGS(_BlueNoise_Texture, sampler_PointRepeat), DitheringScale, DitheringOffset);
-            }
-            #endif
-
-            
-            
-            #if _FXAA
-              {
-                
-                float2 positionNDC = uvDistorted;
-                int2   positionSS  = uvDistorted * _BlitTex_TexelSize.zw;
-                
-                // Edge detection
-                half3 rgbNW = Load(positionSS, -1, -1);
-                half3 rgbNE = Load(positionSS,  1, -1);
-                half3 rgbSW = Load(positionSS, -1,  1);
-                half3 rgbSE = Load(positionSS,  1,  1);
-
-                rgbNW = saturate(rgbNW);
-                rgbNE = saturate(rgbNE);
-                rgbSW = saturate(rgbSW);
-                rgbSE = saturate(rgbSE);
-                color = saturate(color);
-
-                half lumaNW = Luminance(rgbNW);
-                half lumaNE = Luminance(rgbNE);
-                half lumaSW = Luminance(rgbSW);
-                half lumaSE = Luminance(rgbSE);
-                half lumaM = Luminance(color);
-
-                float2 dir;
-                dir.x = -((lumaNW + lumaNE) - (lumaSW + lumaSE));
-                dir.y = ((lumaNW + lumaSW) - (lumaNE + lumaSE));
-
-                half lumaSum = lumaNW + lumaNE + lumaSW + lumaSE;
-                float dirReduce = max(lumaSum * (0.25 * FXAA_REDUCE_MUL), FXAA_REDUCE_MIN);
-                float rcpDirMin = rcp(min(abs(dir.x), abs(dir.y)) + dirReduce);
-
-                dir = min((FXAA_SPAN_MAX).xx, max((-FXAA_SPAN_MAX).xx, dir * rcpDirMin)) * _BlitTex_TexelSize.xy;
-
-                // Blur
-                half3 rgb03 = Fetch(positionNDC, dir * (0.0 / 3.0 - 0.5));
-                half3 rgb13 = Fetch(positionNDC, dir * (1.0 / 3.0 - 0.5));
-                half3 rgb23 = Fetch(positionNDC, dir * (2.0 / 3.0 - 0.5));
-                half3 rgb33 = Fetch(positionNDC, dir * (3.0 / 3.0 - 0.5));
-
-                rgb03 = saturate(rgb03);
-                rgb13 = saturate(rgb13);
-                rgb23 = saturate(rgb23);
-                rgb33 = saturate(rgb33);
-
-                half3 rgbA = 0.5 * (rgb13 + rgb23);
-                half3 rgbB = rgbA * 0.5 + 0.25 * (rgb03 + rgb33);
-
-                half lumaB = Luminance(rgbB);
-
-                half lumaMin = Min3(lumaM, lumaNW, Min3(lumaNE, lumaSW, lumaSE));
-                half lumaMax = Max3(lumaM, lumaNW, Max3(lumaNE, lumaSW, lumaSE));
-
-                color = ((lumaB < lumaMin) || (lumaB > lumaMax)) ? rgbA : rgbB;
             }
             #endif
 
