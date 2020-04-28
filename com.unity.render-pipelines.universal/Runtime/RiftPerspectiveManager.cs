@@ -16,12 +16,12 @@
 
 			Vector3 cameraTransformPosition = cameraTransform.position;
 			Quaternion cameraTransformRotation = cameraTransform.rotation;
-			
-			
+			float nearClipPlane = camera.nearClipPlane;
+
 			cameraCullingMask &= ~InsideRiftCullingMask;
 			cameraCullingMask |= OutsideRiftCullingMask;
 			
-			mainCameraPerspective = new CameraPerspective(cameraTransformPosition, cameraTransformRotation, cameraCullingMask, true);
+			mainCameraPerspective = new CameraPerspective(cameraTransformPosition, cameraTransformRotation, cameraCullingMask, true, nearClipPlane);
 
 			if (_currentRiftController == null)
 			{
@@ -31,7 +31,7 @@
 			{
 				if (_currentRiftController.OverwriteCameraTransformation)
 				{
-					_currentRiftController.GetTransformation(camera,out cameraTransformPosition, out cameraTransformRotation);
+					_currentRiftController.GetTransformation(camera, out cameraTransformPosition, out cameraTransformRotation, out nearClipPlane);
 				}
 
 				if (_currentRiftController.OverwriteCullingMask)
@@ -42,7 +42,7 @@
 				
 				cameraCullingMask &= ~OutsideRiftCullingMask;
 				cameraCullingMask |= InsideRiftCullingMask;
-				additionalCameraPerspective = new CameraPerspective(cameraTransformPosition, cameraTransformRotation, cameraCullingMask, false);
+				additionalCameraPerspective = new CameraPerspective(cameraTransformPosition, cameraTransformRotation, cameraCullingMask, false, nearClipPlane);
 			}
 		}
 

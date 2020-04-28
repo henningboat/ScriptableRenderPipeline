@@ -207,6 +207,7 @@ namespace UnityEngine.Rendering.Universal
             cameraTransform.position = cameraPerspective.CameraPosition;
             cameraTransform.rotation = cameraPerspective.CameraRotation;
             camera.cullingMask = cameraPerspective.CullingMask;
+            camera.nearClipPlane = cameraPerspective.NearClipPlane;
 
             if (!camera.TryGetCullingParameters(IsStereoEnabled(camera), out var cullingParameters))
             {
