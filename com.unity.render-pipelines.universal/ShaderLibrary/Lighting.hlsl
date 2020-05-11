@@ -503,7 +503,8 @@ half3 GlobalIllumination(BRDFData brdfData, half3 bakedGI, half occlusion, half3
     half3 indirectDiffuse = bakedGI * occlusion;
     half3 indirectSpecular = GlossyEnvironmentReflection(reflectVector, brdfData.perceptualRoughness, occlusion);
     
-    half planarReflectionFactor = saturate(normalWS.y);
+    half planarReflectionFactor = saturate((normalWS.y-0.95)*20);
+    
     indirectSpecular = lerp(indirectSpecular, planarGlossyEnvironmentReflection.rgb, planarReflectionFactor * planarGlossyEnvironmentReflection.a);
     
     return EnvironmentBRDF(brdfData, indirectDiffuse, indirectSpecular, fresnelTerm);
