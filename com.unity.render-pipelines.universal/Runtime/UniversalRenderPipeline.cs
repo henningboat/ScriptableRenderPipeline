@@ -42,6 +42,7 @@ namespace UnityEngine.Rendering.Universal
             public static int _ScaledScreenParams;
             public static int _ScreenParams;
             public static int _WorldSpaceCameraPos;
+            public static int _CameraFOV;
         }
 
         public const string k_ShaderTagName = "UniversalPipeline";
@@ -132,6 +133,7 @@ namespace UnityEngine.Rendering.Universal
             PerCameraBuffer._ScreenParams = Shader.PropertyToID("_ScreenParams");
             PerCameraBuffer._ScaledScreenParams = Shader.PropertyToID("_ScaledScreenParams");
             PerCameraBuffer._WorldSpaceCameraPos = Shader.PropertyToID("_WorldSpaceCameraPos");
+            PerCameraBuffer._CameraFOV = Shader.PropertyToID("_CameraFOV");
 
             // Let engine know we have MSAA on for cases where we support MSAA backbuffer
             if (QualitySettings.antiAliasing != asset.msaaSampleCount)
@@ -672,6 +674,8 @@ namespace UnityEngine.Rendering.Universal
             Matrix4x4 viewProjMatrix = projMatrix * viewMatrix;
             Matrix4x4 invViewProjMatrix = Matrix4x4.Inverse(viewProjMatrix);
             Shader.SetGlobalMatrix(PerCameraBuffer._InvCameraViewProj, invViewProjMatrix);
+
+            Shader.SetGlobalFloat(PerCameraBuffer._CameraFOV, cameraData.camera.fieldOfView);
 
             TimePeriod timePeriod = TimePeriodUtility.GetTimePeriod(cameraData);
             ApplyTimePeriodKeyword(timePeriod);
