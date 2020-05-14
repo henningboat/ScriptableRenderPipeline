@@ -1049,7 +1049,7 @@ namespace UnityEditor.Rendering.Universal
     class UniversalRenderPipelineCameraContextualMenu : IRemoveAdditionalDataContextualMenu<Camera>
     {
         //The call is delayed to the dispatcher to solve conflict with other SRP
-        public void RemoveComponent(Camera camera)
+        public void RemoveComponent(Camera camera, IEnumerable<Component> dependencies)
         {
             Undo.SetCurrentGroupName("Remove Universal Camera");
             var additionalCameraData = camera.GetComponent<UniversalAdditionalCameraData>();
