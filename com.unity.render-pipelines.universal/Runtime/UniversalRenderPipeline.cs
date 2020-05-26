@@ -570,13 +570,14 @@ namespace UnityEngine.Rendering.Universal
                 if (visibleLight.light != null && (visibleLight.light.gameObject.layer == 0 || visibleLight.light.gameObject.layer == timePeriodLayer))
                 {
                     remapData[i] = i;
+                    relevantLights[relevantLightCount] = visibleLight;
                 }
                 else
                 {
                     remapData[i] = -1;
+                    relevantLights[relevantLightCount] = new VisibleLight();
                 }
 
-                relevantLights[relevantLightCount] = visibleLight;
                 relevantLightCount++;
             }
 
