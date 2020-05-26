@@ -561,17 +561,22 @@ namespace UnityEngine.Rendering.Universal
 	        int relevantLightCount = 0;
 
 	        int timePeriodLayer = TimePeriodUtility.GetTimePeriodLayer(timePeriod);
-	        for (int i = 0; i < allLights.Length; i++)
-	        {
-		        VisibleLight visibleLight = allLights[i];
-		        if (visibleLight.light != null && (visibleLight.light.gameObject.layer==0 || visibleLight.light.gameObject.layer == timePeriodLayer))
-		        {
-			        relevantLights[relevantLightCount] = visibleLight;
-			        relevantLightCount++;
-		        }
-	        }
+            for (int i = 0; i < allLights.Length; i++)
+            {
+                VisibleLight visibleLight = allLights[i];
+                if (visibleLight.light != null && (visibleLight.light.gameObject.layer == 0 || visibleLight.light.gameObject.layer == timePeriodLayer))
+                {
+                    relevantLights[relevantLightCount] = visibleLight;
+                }
+                else
+                {
+                    relevantLights[relevantLightCount] = new VisibleLight() { finalColor = Color.clear };
+                }
 
-	        NativeArray<VisibleLight> relevantLightsNativeArray = new NativeArray<VisibleLight>(relevantLightCount, Allocator.Temp);
+                relevantLightCount++;
+            }
+
+            NativeArray<VisibleLight> relevantLightsNativeArray = new NativeArray<VisibleLight>(relevantLightCount, Allocator.Temp);
 	        for (int i = 0; i < relevantLightCount; i++)
 	        {
 		        relevantLightsNativeArray[i] = relevantLights[i];
