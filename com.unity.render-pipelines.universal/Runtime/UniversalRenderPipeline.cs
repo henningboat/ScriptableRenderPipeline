@@ -381,7 +381,7 @@ namespace UnityEngine.Rendering.Universal
         {
 	        renderingData.timePeriod = TimePeriodUtility.GetTimePeriod(cameraData);
 
-            var visibleLights = CullLightsOfOtherTimePeriod(cullResults.visibleLights, renderingData.timePeriod);
+            var visibleLights = CullLightsOfOtherTimePeriod(ref cullResults, cullResults.visibleLights, renderingData.timePeriod);
             CullReflectionProbesOfOtherTimePeriods(ref cullResults, renderingData.timePeriod);
 
             int mainLightIndex = GetMainLightIndex(settings, cullResults, visibleLights, out int mainLightShadowIndex);
@@ -555,34 +555,39 @@ namespace UnityEngine.Rendering.Universal
             lightData.mainLightShadowIndex = mainLightShadowIndex;
         }
 
-        private static NativeArray<VisibleLight> CullLightsOfOtherTimePeriod(NativeArray<VisibleLight> allLights, TimePeriod timePeriod)
+        private static NativeArray<VisibleLight> CullLightsOfOtherTimePeriod(ref CullingResults cullResults, NativeArray<VisibleLight> allLights, TimePeriod timePeriod)
         {
-	        VisibleLight[] relevantLights = new VisibleLight[allLights.Length];
-	        int relevantLightCount = 0;
+            VisibleLight[] relevantLights = new VisibleLight[allLights.Length];
+            int relevantLightCount = 0;
 
-	        int timePeriodLayer = TimePeriodUtility.GetTimePeriodLayer(timePeriod);
+            var remapData = cullResults.GetLightIndexMap(Allocator.Temp);
+
+
+            int timePeriodLayer = TimePeriodUtility.GetTimePeriodLayer(timePeriod);
             for (int i = 0; i < allLights.Length; i++)
             {
                 VisibleLight visibleLight = allLights[i];
                 if (visibleLight.light != null && (visibleLight.light.gameObject.layer == 0 || visibleLight.light.gameObject.layer == timePeriodLayer))
                 {
-                    relevantLights[relevantLightCount] = visibleLight;
+                    remapData[i] = i;
                 }
                 else
                 {
-                    relevantLights[relevantLightCount] = new VisibleLight() { finalColor = Color.clear };
+                    remapData[i] = -1;
                 }
 
+                relevantLights[relevantLightCount] = visibleLight;
                 relevantLightCount++;
             }
 
             NativeArray<VisibleLight> relevantLightsNativeArray = new NativeArray<VisibleLight>(relevantLightCount, Allocator.Temp);
-	        for (int i = 0; i < relevantLightCount; i++)
-	        {
-		        relevantLightsNativeArray[i] = relevantLights[i];
-	        }
+            for (int i = 0; i < relevantLightCount; i++)
+            {
+                relevantLightsNativeArray[i] = relevantLights[i];
+            }
 
-	        return relevantLightsNativeArray;
+            cullResults.SetLightIndexMap(remapData);
+            return relevantLightsNativeArray;
         }
 
         static PerObjectData GetPerObjectLightFlags(int additionalLightsCount)
