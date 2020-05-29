@@ -106,6 +106,13 @@ float4 unity_ProbesOcclusion;
 // HDR environment map decode instructions
 real4 unity_SpecCube0_HDR;
 
+float3 unity_SpecCube0_BoxMin;
+float3 unity_SpecCube0_BoxMax;
+float4 unity_SpecCube0_ProbePosition;
+
+
+float3 _CameraPosition;
+
 // Lightmap block feature
 float4 unity_LightmapST;
 float4 unity_DynamicLightmapST;

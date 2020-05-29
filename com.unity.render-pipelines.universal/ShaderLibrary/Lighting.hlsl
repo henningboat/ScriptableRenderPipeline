@@ -495,9 +495,32 @@ half3 SubtractDirectMainLightFromLightmap(Light mainLight, half3 normalWS, half3
     return min(bakedGI, realtimeShadow);
 }
 
-half3 GlobalIllumination(BRDFData brdfData, half3 bakedGI, half occlusion, half3 normalWS, half3 viewDirectionWS, half4 planarGlossyEnvironmentReflection)
+half3 GlobalIllumination(BRDFData brdfData, half3 bakedGI, half occlusion, float3 positionWS, half3 normalWS, half3 viewDirectionWS, half4 planarGlossyEnvironmentReflection)
 {
-    half3 reflectVector = reflect(-viewDirectionWS, normalWS);
+    half3 reflectVector;
+    
+    float3 dir = positionWS - _CameraPosition;
+    
+    if(unity_SpecCube0_ProbePosition.w == 0){
+        reflectVector = reflect(-viewDirectionWS, normalWS);
+    }
+    else
+    {
+    //from https://www.gamedev.net/forums/topic/568829-box-projected-cubemap-environment-mapping/
+    //BPCEM
+        float3 rdir = reflect(dir, normalWS);
+
+        float3 nrdir = normalize(rdir);
+        float3 rbmax = (unity_SpecCube0_BoxMax - positionWS)/nrdir;
+        float3 rbmin = (unity_SpecCube0_BoxMin - positionWS)/nrdir;
+
+        float3 rbminmax = (nrdir>0.0f)?rbmax:rbmin;
+        float fa = min(min(rbminmax.x, rbminmax.y), rbminmax.z);
+
+        float3 posonbox = positionWS + nrdir*fa;
+        reflectVector = posonbox - unity_SpecCube0_ProbePosition.xyz;
+    }
+    
     half fresnelTerm = Pow4(1.0 - saturate(dot(normalWS, viewDirectionWS)));
 
     half3 indirectDiffuse = bakedGI * occlusion;
@@ -577,7 +600,7 @@ half4 UniversalFragmentPBR(InputData inputData, half3 albedo, half metallic, hal
     Light mainLight = GetMainLight(inputData.shadowCoord);
     MixRealtimeAndBakedGI(mainLight, inputData.normalWS, inputData.bakedGI, half4(0, 0, 0, 0));
 
-    half3 color = GlobalIllumination(brdfData, inputData.bakedGI, occlusion, inputData.normalWS, inputData.viewDirectionWS, planarGlossyEnvironmentReflection);
+    half3 color = GlobalIllumination(brdfData, inputData.bakedGI, occlusion, inputData.positionWS, inputData.normalWS, inputData.viewDirectionWS, planarGlossyEnvironmentReflection);
     color += LightingPhysicallyBased(brdfData, mainLight, inputData.normalWS, inputData.viewDirectionWS);
 
 #ifdef _ADDITIONAL_LIGHTS
