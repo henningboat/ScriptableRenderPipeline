@@ -1,4 +1,3 @@
-using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering.Universal;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -68,31 +67,5 @@ namespace UnityEngine.Rendering.LWRP
 		}
 
 		#endregion
-	}
-
-	public static class ReflectionProbeUtility
-	{
-		public static CubemapArray SetupCubeMapArray(ReflectionProbe[] reflectionProbes)
-		{
-			CubemapArray cubemaps = new CubemapArray(256, reflectionProbes.Length, DefaultFormat.HDR, TextureCreationFlags.MipChain);
-			for (int i = 0; i < reflectionProbes.Length; i++)
-			{
-				for (int j = 0; j < 6; j++)
-				{
-					Graphics.CopyTexture(reflectionProbes[i].texture, j, cubemaps, i * 6 + j);
-				}
-			}
-			
-			//cubemaps.Apply();
-			//return cubemaps;
-			// Cubemap cubemaps = new Cubemap(256, DefaultFormat.HDR, TextureCreationFlags.MipChain);
-			//
-			// for (int i = 0; i < 6; i++)
-			// {
-			// 	Graphics.CopyTexture(reflectionProbes[0].texture, i, cubemaps, i);
-			// }
-
-			return cubemaps;
-		}
 	}
 }

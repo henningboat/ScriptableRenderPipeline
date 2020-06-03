@@ -21,6 +21,7 @@
             #pragma fragment frag
 
             #include "UnityCG.cginc"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/MultiReflectionProbes.hlsl"
 
             struct appdata
             {
@@ -38,14 +39,17 @@
             };
 
 float4x4 _ViewProjInv;
-            StructuredBuffer<float3> _ReflectionProbeBoundsBuffer;
+
 sampler2D _CameraDepthTexture;
+
             v2f vert (appdata v)
             {
                 v2f o;
                 
-                float3 boundsCenter = _ReflectionProbeBoundsBuffer[v.instance * 2].xyz;
-                float3 boundsExtends = _ReflectionProbeBoundsBuffer[v.instance * 2 + 1].xyz;
+                ReflectionProbeData data = _ReflectionProbeBoundsBuffer[v.instance + 1];
+                
+                float3 boundsCenter = data.center;
+                float3 boundsExtends = data.extends;
                 
                 v.vertex.xyz *= boundsExtends * 2;
                 v.vertex.xyz += boundsCenter;
@@ -53,6 +57,7 @@ sampler2D _CameraDepthTexture;
                 o.vertex = UnityObjectToClipPos(v.vertex);
                 
                 o.value = v.instance + 1;
+                
 				o.screenUV = ComputeScreenPos( o.vertex);
                 
                 o.boundsCenter = boundsCenter;

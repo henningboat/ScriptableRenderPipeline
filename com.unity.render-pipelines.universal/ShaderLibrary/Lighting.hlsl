@@ -6,6 +6,7 @@
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/ImageBasedLighting.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/MultiReflectionProbes.hlsl"
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/API/D3D11.hlsl"
 
 // If lightmap is not defined than we evaluate GI (ambient + probes) from SH
@@ -456,8 +457,6 @@ half3 SampleLightmap(float2 lightmapUV, half3 normalWS)
     SAMPLER(sampler_aihit_REFLECTION_PROBE_ARRAY);
 #endif
 
-float _CustomReflectionProbeIndex;
-
 half3 GlossyEnvironmentReflection(half3 reflectVector, half perceptualRoughness, half occlusion)
 {
 #if !defined(_ENVIRONMENTREFLECTIONS_OFF)
@@ -510,7 +509,13 @@ half3 SubtractDirectMainLightFromLightmap(Light mainLight, half3 normalWS, half3
 
 half3 GlobalIllumination(BRDFData brdfData, half3 bakedGI, half occlusion, float3 positionWS, half3 normalWS, half3 viewDirectionWS, half4 planarGlossyEnvironmentReflection)
 {
+
+#ifdef AIHIT_MULTI_REFLECTION_PROPES
+    ApplyMultiReflectionProbeData();
+#endif
+
     half3 reflectVector;
+    
     
     float3 dir = positionWS - _CameraPosition;
     
