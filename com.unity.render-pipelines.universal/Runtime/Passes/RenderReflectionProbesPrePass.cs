@@ -1,19 +1,28 @@
-﻿using System.Linq;
-using Unity.Collections;
+﻿using Unity.Collections;
 
 namespace UnityEngine.Rendering.Universal.Internal
 {
 	public class RenderReflectionProbesPrePass : ScriptableRenderPass
 	{
+		#region Static Stuff
+
+		private static readonly int _ReflectionProbeBoundsBufferID = Shader.PropertyToID("_ReflectionProbeBoundsBuffer");
+
+		#endregion
+
+		#region Private Fields
+
 		private string _profilerTag = "Render Reflection Probe pre pass";
 		private ComputeBuffer _reflectionProbeAABBComputeBuffer;
 		private Mesh _cubeMesh;
 		private Material _material;
 		private RenderTargetHandle _reflectionProbeMap;
 		private RenderTexture _reflectionProbeMapTexture;
-
-		private static readonly int _ReflectionProbeBoundsBufferID = Shader.PropertyToID("_ReflectionProbeBoundsBuffer");
 		private ComputeBuffer _computeBuffer;
+
+		#endregion
+
+		#region Constructors
 
 		public RenderReflectionProbesPrePass(RenderPassEvent evt, Mesh cubeMesh)
 		{
@@ -22,10 +31,9 @@ namespace UnityEngine.Rendering.Universal.Internal
 			_cubeMesh = cubeMesh;
 		}
 
-		private void CreateMaterial()
-		{
-			_material = new Material(Shader.Find("Hidden/ReflectionProbePrepass"));
-		}
+		#endregion
+
+		#region Public methods
 
 		public void Setup()
 		{
@@ -33,9 +41,10 @@ namespace UnityEngine.Rendering.Universal.Internal
 
 		public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescripor)
 		{
-			_reflectionProbeMapTexture = RenderTexture.GetTemporary(cameraTextureDescripor.width,
-				cameraTextureDescripor.height, 0, RenderTextureFormat.R8);
-			ConfigureTarget(new RenderTargetIdentifier(_reflectionProbeMapTexture));
+			cmd.GetTemporaryRT(_reflectionProbeMap.id, cameraTextureDescripor.width, cameraTextureDescripor.height, 0, FilterMode.Point);
+			RenderTargetIdentifier screenSpaceOcclusionTexture = _reflectionProbeMap.Identifier();
+			ConfigureTarget(screenSpaceOcclusionTexture);
+
 			ConfigureClear(ClearFlag.All, Color.black);
 		}
 
@@ -60,7 +69,7 @@ namespace UnityEngine.Rendering.Universal.Internal
 
 				_reflectionProbeAABBComputeBuffer = new ComputeBuffer(oneMinusReflectionProbeCount * 2, 3 * 4, ComputeBufferType.Structured);
 
-				Vector3[] reflectionProbeCenterAndSizeData = new Vector3[oneMinusReflectionProbeCount * 2];
+				Vector3[] reflectionProbeCenterAndExtendsData = new Vector3[oneMinusReflectionProbeCount * 2];
 
 				int mainReflectionProbeIndex = 0;
 				for (int i = 0; i < reflectionProbes.Length; i++)
@@ -71,25 +80,24 @@ namespace UnityEngine.Rendering.Universal.Internal
 					}
 				}
 
-
 				int index = 0;
 				for (int i = 0; i < reflectionProbes.Length; i++)
 				{
 					if (i != mainReflectionProbeIndex)
 					{
 						Bounds bounds = reflectionProbes[i].bounds;
-						reflectionProbeCenterAndSizeData[index * 2] = bounds.center;
-						reflectionProbeCenterAndSizeData[index * 2 + 1] = bounds.size;
+						reflectionProbeCenterAndExtendsData[index * 2] = bounds.center;
+						reflectionProbeCenterAndExtendsData[index * 2 + 1] = bounds.extents;
 						index++;
 					}
 				}
 
-				_reflectionProbeAABBComputeBuffer.SetData(reflectionProbeCenterAndSizeData);
+				_reflectionProbeAABBComputeBuffer.SetData(reflectionProbeCenterAndExtendsData);
 
 				//from https://forum.unity.com/threads/reconstructing-world-pos-from-depth-imprecision.228936/
 				Matrix4x4 viewMat = renderingData.cameraData.camera.worldToCameraMatrix;
-				Matrix4x4 projMat = GL.GetGPUProjectionMatrix( renderingData.cameraData.camera.projectionMatrix, false );
-				Matrix4x4 viewProjMat = (projMat * viewMat);          
+				Matrix4x4 projMat = GL.GetGPUProjectionMatrix(renderingData.cameraData.camera.projectionMatrix, false);
+				Matrix4x4 viewProjMat = (projMat * viewMat);
 				cmd.SetGlobalMatrix("_ViewProjInv", viewProjMat.inverse);
 
 				cmd.SetGlobalBuffer(_ReflectionProbeBoundsBufferID, _reflectionProbeAABBComputeBuffer);
@@ -97,19 +105,26 @@ namespace UnityEngine.Rendering.Universal.Internal
 				cmd.DrawMeshInstancedProcedural(_cubeMesh, 0, _material, 0, oneMinusReflectionProbeCount);
 			}
 
-			cmd.SetGlobalTexture(_reflectionProbeMap.id, _reflectionProbeMapTexture);
 			context.ExecuteCommandBuffer(cmd);
-
-
 
 			CommandBufferPool.Release(cmd);
 		}
 
-
-		/// <inheritdoc/>
+		/// <inheritdoc />
 		public override void FrameCleanup(CommandBuffer cmd)
 		{
-			_reflectionProbeMapTexture.Release();
+			cmd.ReleaseTemporaryRT(_reflectionProbeMap.id);
 		}
+
+		#endregion
+
+		#region Private methods
+
+		private void CreateMaterial()
+		{
+			_material = new Material(Shader.Find("Hidden/ReflectionProbePrepass"));
+		}
+
+		#endregion
 	}
 }

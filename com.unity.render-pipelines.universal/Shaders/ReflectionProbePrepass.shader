@@ -9,6 +9,10 @@
         Tags { "RenderType"="Opaque" }
         LOD 100
         Cull Front
+        ZWrite Off
+        ZTest Always
+        BlendOp Max
+        Blend One One
 
         Pass
         {
@@ -29,8 +33,8 @@
                 float value : TEXCOORD0;
                 float4 vertex : SV_POSITION;
                 float4 screenUV : TEXCOORD1;
-                float3 boundsCenter : TEXCOORD2;
-                float3 boundsSize : TEXCOORD3;
+                float3 boundsExtends : TEXCOORD2;
+                float3 boundsCenter : TEXCOORD3;
             };
 
 float4x4 _ViewProjInv;
@@ -41,9 +45,9 @@ sampler2D _CameraDepthTexture;
                 v2f o;
                 
                 float3 boundsCenter = _ReflectionProbeBoundsBuffer[v.instance * 2].xyz;
-                float3 boundsSize = _ReflectionProbeBoundsBuffer[v.instance * 2 + 1].xyz;
+                float3 boundsExtends = _ReflectionProbeBoundsBuffer[v.instance * 2 + 1].xyz;
                 
-                v.vertex.xyz *= boundsSize;
+                v.vertex.xyz *= boundsExtends * 2;
                 v.vertex.xyz += boundsCenter;
                 
                 o.vertex = UnityObjectToClipPos(v.vertex);
@@ -52,7 +56,7 @@ sampler2D _CameraDepthTexture;
 				o.screenUV = ComputeScreenPos( o.vertex);
                 
                 o.boundsCenter = boundsCenter;
-                o.boundsSize = boundsSize;
+                o.boundsExtends = boundsExtends;
                 
                 return o;
             }
@@ -69,7 +73,7 @@ sampler2D _CameraDepthTexture;
                 
                 float3 absPositionBS = abs(positionWS - i.boundsCenter);
                 
-                bool isInsideBox = absPositionBS.x < i.boundsSize.x && absPositionBS.y < i.boundsSize.y && absPositionBS.z < i.boundsSize.z;
+                bool isInsideBox = absPositionBS.x < i.boundsExtends.x && absPositionBS.y < i.boundsExtends.y && absPositionBS.z < i.boundsExtends.z;
                 
                 if(isInsideBox){
                     return i.value / 256;
