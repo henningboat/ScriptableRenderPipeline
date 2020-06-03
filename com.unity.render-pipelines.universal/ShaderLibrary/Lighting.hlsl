@@ -463,6 +463,11 @@ half3 GlossyEnvironmentReflection(half3 reflectVector, half perceptualRoughness,
     half mip = PerceptualRoughnessToMipmapLevel(perceptualRoughness);
 #ifdef AIHIT_MULTI_REFLECTION_PROPES
     half4 encodedIrradiance = SAMPLE_TEXTURECUBE_ARRAY_LOD(aihit_REFLECTION_PROBE_ARRAY, sampler_aihit_REFLECTION_PROBE_ARRAY, reflectVector, _CustomReflectionProbeIndex, mip);
+    
+    //todo performance overhead, there's a better way to do this
+    if(_CustomReflectionProbeIndex==0){
+        encodedIrradiance = 1;
+    }
 #else    
     half4 encodedIrradiance = SAMPLE_TEXTURECUBE_LOD(unity_SpecCube0, samplerunity_SpecCube0, reflectVector, mip);
 #endif
