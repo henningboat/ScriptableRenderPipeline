@@ -177,6 +177,10 @@ namespace UnityEngine.Rendering.Universal
         internal UniversalRenderPipelineEditorResources m_EditorResourcesAsset;
 
         public static readonly string packagePath = "Packages/com.unity.render-pipelines.universal";
+        
+        [SerializeField] private Mesh m_cubeMesh;
+        
+        public Mesh cubeMesh => m_cubeMesh;
 
         public static UniversalRenderPipelineAsset Create(ScriptableRendererData rendererData = null)
         {

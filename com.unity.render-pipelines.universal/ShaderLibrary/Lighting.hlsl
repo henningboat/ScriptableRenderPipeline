@@ -6,6 +6,7 @@
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/ImageBasedLighting.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
+#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/API/D3D11.hlsl"
 
 // If lightmap is not defined than we evaluate GI (ambient + probes) from SH
 // We might do it fully or partially in vertex to save shader ALU
@@ -449,11 +450,23 @@ half3 SampleLightmap(float2 lightmapUV, half3 normalWS)
 #define SAMPLE_GI(lmName, shName, normalWSName) SampleSHPixel(shName, normalWSName)
 #endif
 
+
+#ifdef AIHIT_MULTI_REFLECTION_PROPES
+    TEXTURECUBE_ARRAY(aihit_REFLECTION_PROBE_ARRAY);
+    SAMPLER(sampler_aihit_REFLECTION_PROBE_ARRAY);
+#endif
+
+float _CustomReflectionProbeIndex;
+
 half3 GlossyEnvironmentReflection(half3 reflectVector, half perceptualRoughness, half occlusion)
 {
 #if !defined(_ENVIRONMENTREFLECTIONS_OFF)
     half mip = PerceptualRoughnessToMipmapLevel(perceptualRoughness);
+#ifdef AIHIT_MULTI_REFLECTION_PROPES
+    half4 encodedIrradiance = SAMPLE_TEXTURECUBE_ARRAY_LOD(aihit_REFLECTION_PROBE_ARRAY, sampler_aihit_REFLECTION_PROBE_ARRAY, reflectVector, _CustomReflectionProbeIndex, mip);
+#else    
     half4 encodedIrradiance = SAMPLE_TEXTURECUBE_LOD(unity_SpecCube0, samplerunity_SpecCube0, reflectVector, mip);
+#endif
 
 #if !defined(UNITY_USE_NATIVE_HDR)
     half3 irradiance = DecodeHDREnvironment(encodedIrradiance, unity_SpecCube0_HDR);

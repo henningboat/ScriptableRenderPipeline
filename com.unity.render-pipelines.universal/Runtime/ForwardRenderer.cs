@@ -28,6 +28,7 @@ namespace UnityEngine.Rendering.Universal
         PostProcessPass m_FinalPostProcessPass;
         FinalBlitPass m_FinalBlitPass;
         CapturePass m_CapturePass;
+        RenderReflectionProbesPrePass m_refelectionProbePrePass;
 
 #if UNITY_EDITOR
         SceneViewDepthCopyPass m_SceneViewDepthCopyPass;
@@ -81,6 +82,8 @@ namespace UnityEngine.Rendering.Universal
             m_CapturePass = new CapturePass(RenderPassEvent.AfterRendering);
             m_FinalBlitPass = new FinalBlitPass(RenderPassEvent.AfterRendering, blitMaterial);
 
+            m_refelectionProbePrePass = new RenderReflectionProbesPrePass(RenderPassEvent.AfterRenderingPrePasses, UniversalRenderPipeline.asset.cubeMesh);
+            
 #if UNITY_EDITOR
             m_SceneViewDepthCopyPass = new SceneViewDepthCopyPass(RenderPassEvent.AfterRendering + 9, copyDepthMaterial);
 #endif
@@ -127,14 +130,9 @@ namespace UnityEngine.Rendering.Universal
             // - We resolve shadows in screen space
             // - Scene view camera always requires a depth texture. We do a depth pre-pass to simplify it and it shouldn't matter much for editor.
             // - If game or offscreen camera requires it we check if we can copy the depth from the rendering opaques pass and use that instead.
-            bool requiresDepthPrepass = renderingData.cameraData.isSceneViewCamera ||
-                (cameraData.requiresDepthTexture && (!CanCopyDepth(ref renderingData.cameraData)));
-            requiresDepthPrepass |= resolveShadowsInScreenSpace;
-
-            // TODO: There's an issue in multiview and depth copy pass. Atm forcing a depth prepass on XR until
-            // we have a proper fix.
-            if (cameraData.isStereoEnabled && cameraData.requiresDepthTexture)
-                requiresDepthPrepass = true;
+            
+            //For AIHIT, we always require a depth prepass
+            bool requiresDepthPrepass = true;
 
             bool createColorTexture = RequiresIntermediateColorTexture(ref renderingData, cameraTargetDescriptor)
                                       || rendererFeatures.Count != 0;
@@ -184,6 +182,8 @@ namespace UnityEngine.Rendering.Universal
                 EnqueuePass(m_DepthPrepass);
             }
 
+            EnqueuePass(m_refelectionProbePrePass);
+            
             if (resolveShadowsInScreenSpace)
             {
                 m_ScreenSpaceShadowResolvePass.Setup(cameraTargetDescriptor);

@@ -89,6 +89,7 @@ namespace UnityEngine.Rendering.Universal.Internal
                     Blit(cmd, source, opaqueColorRT);
                     break;
             }
+
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);
         }
