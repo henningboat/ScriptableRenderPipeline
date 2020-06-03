@@ -5,6 +5,7 @@ struct ReflectionProbeData{
     float3 center;
     float3 extends;
     float box;
+    float timePeriodIndex;
 };
 
 StructuredBuffer<ReflectionProbeData> _ReflectionProbeBoundsBuffer;

@@ -9,7 +9,7 @@ namespace UnityEngine.Rendering.Universal
 		T2 = 1 << 1,
 		T3 = 1 << 2,
 		T4 = 1 << 3,
-		TAll = T1 | T2 | T3 |T4,
+		TAll = T1 | T2 | T3 | T4,
 	}
 
 	public static class TimePeriodUtility
@@ -29,7 +29,11 @@ namespace UnityEngine.Rendering.Universal
 		public static TimePeriod GetTimePeriod(CameraData cameraData)
 		{
 			int cameraCullingMask = cameraData.camera.cullingMask;
+			return GetTimePeriodFromCullingMask(cameraCullingMask);
+		}
 
+		public static TimePeriod GetTimePeriodFromCullingMask(int cameraCullingMask)
+		{
 			int timePeriodMask = cameraCullingMask & AllTimePeriodLayerMasks;
 
 			if (timePeriodMask == TimePeriodLayerMasksT1)
@@ -72,6 +76,56 @@ namespace UnityEngine.Rendering.Universal
 				default:
 					throw new ArgumentOutOfRangeException(nameof(timePeriod), timePeriod, null);
 			}
+		}
+
+		public static int GetTimePeriodIndex(TimePeriod timePeriod)
+		{
+			switch (timePeriod)
+			{
+				case TimePeriod.T1:
+					return 0;
+					break;
+				case TimePeriod.T2:
+					return 1;
+					break;
+				case TimePeriod.T3:
+					return 2;
+					break;
+				case TimePeriod.T4:
+					return 3;
+			}
+
+			throw new ArgumentOutOfRangeException(nameof(timePeriod), timePeriod, null);
+		}
+
+		public static TimePeriod GetTimePeriodFromIndex(int index)
+		{
+			switch (index)
+			{
+				case 0:
+					return TimePeriod.T1;
+				case 1:
+					return TimePeriod.T2;
+				case 2:
+					return TimePeriod.T3;
+				case 3:
+					return TimePeriod.T4;
+			}
+
+			throw new ArgumentOutOfRangeException();
+		}
+
+		public static TimePeriod GetTimePeriodFromLayer(int gameObjectLayer)
+		{
+			if (gameObjectLayer == TimePeriodLayerT1)
+				return TimePeriod.T1;
+			if (gameObjectLayer == TimePeriodLayerT2)
+				return TimePeriod.T2;
+			if (gameObjectLayer == TimePeriodLayerT3)
+				return TimePeriod.T3;
+			if (gameObjectLayer == TimePeriodLayerT4)
+				return TimePeriod.T4;
+			throw new ArgumentNullException();
 		}
 
 		static TimePeriodUtility()

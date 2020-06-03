@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Unity.Collections;
 using UnityEngine.Rendering.LWRP;
 
@@ -18,6 +19,7 @@ namespace UnityEngine.Rendering.Universal.Internal
 		private RenderTargetHandle _reflectionProbeMap;
 		private RenderTexture _reflectionProbeMapTexture;
 		private ComputeBuffer _computeBuffer;
+		private ComputeBuffer _reflectionProbeIndiceBuffer;
 
 		#endregion
 
@@ -44,7 +46,8 @@ namespace UnityEngine.Rendering.Universal.Internal
 			RenderTargetIdentifier screenSpaceOcclusionTexture = _reflectionProbeMap.Identifier();
 			ConfigureTarget(screenSpaceOcclusionTexture);
 
-			ConfigureClear(ClearFlag.All, Color.black);
+			
+			ConfigureClear(ClearFlag.None, Color.clear);
 		}
 
 		public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
@@ -52,22 +55,34 @@ namespace UnityEngine.Rendering.Universal.Internal
 			NativeArray<VisibleReflectionProbe> reflectionProbes = renderingData.cullResults.visibleReflectionProbes;
 			var cmd = CommandBufferPool.Get(_profilerTag);
 
-			ReflectionProbeUtility.BuildCubeMap(false, out int totalReflectionProbeCount);
 			
-			if (_cubeMesh != null && totalReflectionProbeCount > 1)
+			ReflectionProbeUtility.BuildCubeMap(false,renderingData.timePeriod, out List<int> refelctionProbeIndices);
+			cmd.ClearRenderTarget(true, true, new Color32((byte) refelctionProbeIndices[0], 0, 0, 0));
+
+			
+			if (_cubeMesh != null && refelctionProbeIndices.Count > 1)
 			{
 				if (_material == null)
 				{
 					CreateMaterial();
 				}
 				
+				if (_reflectionProbeIndiceBuffer != null)
+				{
+					_reflectionProbeIndiceBuffer.Dispose();
+				}
+
+				_reflectionProbeIndiceBuffer = new ComputeBuffer(refelctionProbeIndices.Count, 4);
+				_reflectionProbeIndiceBuffer.SetData(refelctionProbeIndices);
+
 				//from https://forum.unity.com/threads/reconstructing-world-pos-from-depth-imprecision.228936/
 				Matrix4x4 viewMat = renderingData.cameraData.camera.worldToCameraMatrix;
 				Matrix4x4 projMat = GL.GetGPUProjectionMatrix(renderingData.cameraData.camera.projectionMatrix, false);
 				Matrix4x4 viewProjMat = (projMat * viewMat);
 				cmd.SetGlobalMatrix("_ViewProjInv", viewProjMat.inverse);
+				cmd.SetGlobalBuffer("_ReflectionProbeIndiceBuffer", _reflectionProbeIndiceBuffer);
 
-				cmd.DrawMeshInstancedProcedural(_cubeMesh, 0, _material, 0, totalReflectionProbeCount - 1);
+				cmd.DrawMeshInstancedProcedural(_cubeMesh, 0, _material, 0, refelctionProbeIndices.Count - 1);
 			}
 
 			context.ExecuteCommandBuffer(cmd);

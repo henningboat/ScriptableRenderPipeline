@@ -11,8 +11,6 @@
         Cull Front
         ZWrite Off
         ZTest Always
-        BlendOp Max
-        Blend One One
 
         Pass
         {
@@ -39,14 +37,15 @@
             };
 
 float4x4 _ViewProjInv;
-
+StructuredBuffer<int> _ReflectionProbeIndiceBuffer;
 sampler2D _CameraDepthTexture;
 
             v2f vert (appdata v)
             {
                 v2f o;
                 
-                ReflectionProbeData data = _ReflectionProbeBoundsBuffer[v.instance + 1];
+                int reflectionProbeIndex = _ReflectionProbeIndiceBuffer[v.instance + 1];
+                ReflectionProbeData data = _ReflectionProbeBoundsBuffer[reflectionProbeIndex];
                 
                 float3 boundsCenter = data.center;
                 float3 boundsExtends = data.extends;
@@ -54,9 +53,9 @@ sampler2D _CameraDepthTexture;
                 v.vertex.xyz *= boundsExtends * 2;
                 v.vertex.xyz += boundsCenter;
                 
-                o.vertex = UnityObjectToClipPos(v.vertex);
+                o.vertex = UnityWorldToClipPos(v.vertex);
                 
-                o.value = v.instance + 1;
+                o.value = reflectionProbeIndex;
                 
 				o.screenUV = ComputeScreenPos( o.vertex);
                 
@@ -66,7 +65,7 @@ sampler2D _CameraDepthTexture;
                 return o;
             }
 
-            fixed3 frag (v2f i) : SV_Target
+            fixed4 frag (v2f i) : SV_Target
             {
                 float2 screenUV = i.screenUV.xy/i.screenUV.w;
                 
@@ -80,11 +79,12 @@ sampler2D _CameraDepthTexture;
                 
                 bool isInsideBox = absPositionBS.x < i.boundsExtends.x && absPositionBS.y < i.boundsExtends.y && absPositionBS.z < i.boundsExtends.z;
                 
-                if(isInsideBox){
-                    return i.value / 256;
-                }else{
-                    return 0;
+                if(!isInsideBox){
+                    clip(-1);
                 }
+                
+                    return i.value / 256;
+                
             }
             ENDCG
         }

@@ -1,8 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using UnityEditor;
 using UnityEngine.Experimental.Rendering;
+using UnityEngine.Rendering.Universal;
 
 namespace UnityEngine.Rendering.LWRP
 {
@@ -18,11 +20,8 @@ namespace UnityEngine.Rendering.LWRP
 		private static bool _isDirty;
 		private static bool _lastSelectionWasReflectionProbe;
 
-		[MenuItem("AIHIT/UpdateReflectionProbes")]
-		private static void ForceUpdateReflectionProbes()
-		{
-			BuildCubeMap(true, out int i);
-		}
+		private static List<List<int>> _perTimePeriodRefelctionProbeIndices;
+
 
 		[InitializeOnLoadMethod]
 		[RuntimeInitializeOnLoadMethod]
@@ -57,50 +56,72 @@ namespace UnityEngine.Rendering.LWRP
 			_isDirty = true;
 		}
 
-		public static void BuildCubeMap(bool forceUpdate, out int totalReflectionProbeCount)
+		public static void BuildCubeMap(bool forceUpdate,TimePeriod currentTimePeriod, out List<int> reflectionProbeIndices)
 		{
+			int currentTimePeriodIndex = TimePeriodUtility.GetTimePeriodIndex(currentTimePeriod);
 			if (_isDirty)
 			{
 				forceUpdate = true;
 			}
 			if (_cubemap != null && !forceUpdate)
 			{
-				totalReflectionProbeCount = _reflectionProbes.Count;
+				reflectionProbeIndices = _perTimePeriodRefelctionProbeIndices[currentTimePeriodIndex];
 				return;
 			}
 
 			_isDirty = false;
 			_reflectionProbes = Object.FindObjectsOfType<ReflectionProbe>().ToList();
-			totalReflectionProbeCount = _reflectionProbes.Count;
 
-			float maxVolume = float.MinValue;
-			ReflectionProbe mainRefelctionProbe=null;
-			foreach (ReflectionProbe reflectionProbe in _reflectionProbes)
+		
+
+
+			_perTimePeriodRefelctionProbeIndices = new List<List<int>>();
+
+			//we always add the default reflection probe just in case
+			int reflectionProbeCount = _reflectionProbes.Count + 1;
+
+			for (int i = 0; i < 4; i++)
 			{
-				Vector3 boundsSize = reflectionProbe.bounds.size;
-				float volume = boundsSize.x * boundsSize.y * boundsSize.z;
-				if (volume > maxVolume)
+				List<int> _indicesForTimePeriod = new List<int>();
+
+				TimePeriod timePeriod = TimePeriodUtility.GetTimePeriodFromIndex(i);
+				int timePeriodLayer = TimePeriodUtility.GetTimePeriodLayer(timePeriod);
+
+
+				List<ReflectionProbe> reflectionProbesForTimePeriod = _reflectionProbes.Where(probe => probe.gameObject.layer == timePeriodLayer).ToList();
+
+				float maxVolume = float.MinValue;
+				ReflectionProbe mainRefelctionProbe = null;
+				foreach (ReflectionProbe reflectionProbe in reflectionProbesForTimePeriod)
 				{
-					mainRefelctionProbe = reflectionProbe;
-					maxVolume = volume;
+					Vector3 boundsSize = reflectionProbe.bounds.size;
+					float volume = boundsSize.x * boundsSize.y * boundsSize.z;
+					if (volume > maxVolume)
+					{
+						mainRefelctionProbe = reflectionProbe;
+						maxVolume = volume;
+					}
 				}
-			}
 
-			if (mainRefelctionProbe != null)
-			{
-				_reflectionProbes.Remove(mainRefelctionProbe);
-				_reflectionProbes.Insert(0, mainRefelctionProbe);
+				if (mainRefelctionProbe != null)
+				{
+					reflectionProbesForTimePeriod.Remove(mainRefelctionProbe);
+					reflectionProbesForTimePeriod.Insert(0, mainRefelctionProbe);
+				}
+
+				foreach (ReflectionProbe probe in reflectionProbesForTimePeriod)
+				{
+					_indicesForTimePeriod.Add(_reflectionProbes.IndexOf(probe) + 1);
+				}
+
+				if (_indicesForTimePeriod.Count == 0)
+				{
+					_indicesForTimePeriod.Add(0);
+				}
+
+				_perTimePeriodRefelctionProbeIndices.Add(_indicesForTimePeriod);
 			}
 			
-			int reflectionProbeCount = _reflectionProbes.Count;
-
-			bool useDefaultReflectionProbe = false;
-
-			if (reflectionProbeCount == 0)
-			{
-				reflectionProbeCount = 1;
-				useDefaultReflectionProbe = true;
-			}
 
 			if (_cubemap != null)
 			{
@@ -114,48 +135,48 @@ namespace UnityEngine.Rendering.LWRP
 			{
 				CreateCubeMapArray(reflectionProbeCount);
 			}
-
-			if (!useDefaultReflectionProbe)
+			
+			//todo initialize default reflection probe. I bet it will be random noise on Nintendo Switch
+			
+			for (int i = 0; i < _reflectionProbes.Count; i++)
 			{
-				for (int i = 0; i < reflectionProbeCount; i++)
+				Texture texture = _reflectionProbes[i].texture;
+				if (texture == null || texture.width != 256)
 				{
-					Texture texture = _reflectionProbes[i].texture;
-					if (texture == null || texture.width != 256)
-					{
-						continue;
-					}
-
-					for (int j = 0; j < 6; j++)
-					{
-						Graphics.CopyTexture(texture, j, _cubemap, i * 6 + j);
-					}
+					continue;
 				}
-			}
-			else
-			{
+
 				for (int j = 0; j < 6; j++)
 				{
-					Graphics.CopyTexture(ReflectionProbe.defaultTexture, j, _cubemap, j);
+					Graphics.CopyTexture(texture, j, _cubemap, 6 + i * 6 + j);
 				}
 			}
 
-			ReflectionProbeMap[] _probeMap = new ReflectionProbeMap[reflectionProbeCount];
 
+			ReflectionProbeMap[] _probeMap = new ReflectionProbeMap[reflectionProbeCount];
+			_probeMap[0]=new ReflectionProbeMap();
 			for (int i = 0; i < _reflectionProbes.Count; i++)
 			{
 				var probe = _reflectionProbes[i];
 				var bounds = probe.bounds;
-				_probeMap[i] = new ReflectionProbeMap(bounds.center, bounds.extents, probe.boxProjection ? 1 : 0);
+
+				TimePeriod timePeriod = TimePeriodUtility.GetTimePeriodFromLayer(probe.gameObject.layer);
+				int timePeriodIndex = TimePeriodUtility.GetTimePeriodIndex(timePeriod);
+				
+				_probeMap[i+1] = new ReflectionProbeMap(bounds.center, bounds.extents, probe.boxProjection ? 1 : 0, timePeriodIndex);
 			}
 
 			if (_reflectionProbeComputeBuffer != null)
 				_reflectionProbeComputeBuffer.Dispose();
 
-			_reflectionProbeComputeBuffer = new ComputeBuffer(reflectionProbeCount, 28, ComputeBufferType.Structured);
+			_reflectionProbeComputeBuffer = new ComputeBuffer(reflectionProbeCount, 32, ComputeBufferType.Structured);
 			_reflectionProbeComputeBuffer.SetData(_probeMap);
 
 			Shader.SetGlobalBuffer(ReflectionProbeBoundsBuffer, _reflectionProbeComputeBuffer);
 			Shader.SetGlobalTexture(AIHITReflectionProbeArrayID, _cubemap);
+			
+			
+			reflectionProbeIndices = _perTimePeriodRefelctionProbeIndices[currentTimePeriodIndex];
 		}
 
 
@@ -165,12 +186,14 @@ namespace UnityEngine.Rendering.LWRP
 			private Vector3 _center;
 			private Vector3 _extends;
 			private float _box;
+			private float _timePeriodIndex;
 
-			public ReflectionProbeMap(Vector3 center, Vector3 extends, float box)
+			public ReflectionProbeMap(Vector3 center, Vector3 extends, float box, float timePeriodIndex)
 			{
 				_center = center;
 				_extends = extends;
 				_box = box;
+				_timePeriodIndex = timePeriodIndex;
 			}
 		}
 
