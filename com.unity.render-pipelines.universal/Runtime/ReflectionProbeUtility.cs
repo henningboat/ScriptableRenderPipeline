@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
-using UnityEditor;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering.Universal;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace UnityEngine.Rendering.LWRP
 {
@@ -23,11 +25,13 @@ namespace UnityEngine.Rendering.LWRP
 		private static List<List<int>> _perTimePeriodRefelctionProbeIndices;
 		private static List<int> _fallbackIndices = new List<int>() { 0 };
 
-
+#if UNITY_EDITOR
 		[InitializeOnLoadMethod]
+#endif
 		[RuntimeInitializeOnLoadMethod]
 		public static void Init()
 		{
+#if UNITY_EDITOR
 			Selection.selectionChanged += () =>
 			                              {
 				                              if (_lastSelectionWasReflectionProbe)
@@ -48,6 +52,7 @@ namespace UnityEngine.Rendering.LWRP
 					                            }
 				                            }
 			                            };
+#endif
 
 			ReflectionProbe.reflectionProbeChanged += (reflectionProbe, e) => SetDirty();
 		}
